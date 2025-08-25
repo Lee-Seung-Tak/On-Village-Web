@@ -1,0 +1,6 @@
+/* src/styles/globals.cssb*/
+@import "tailwindcss";
+
+body {
+  font-family: 'NanumSquareRound', sans-serif;
+}
