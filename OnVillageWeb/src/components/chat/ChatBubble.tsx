@@ -1,25 +1,36 @@
 // src/components/chat/ChatBubble.tsx
 
 type Props = {
-  side: "left" | "right"; // left=bot, right=user
+  side: "left" | "right"; // 왼쪽(공무원/시스템), 오른쪽(사용자)
   children: React.ReactNode;
-  className?: string;
 };
 
-export default function ChatBubble({ side, children, className = "" }: Props) {
-  const isRight = side === "right";
-  const bg = isRight ? "bg-[#7CAB63] text-white" : "bg-white text-[#2F3A2F]";
-  const tailBg = isRight ? "bg-[#7CAB63]" : "bg-white";
+export default function ChatBubble({ side, children }: Props) {
+  const isLeft = side === "left";
 
   return (
-    <div className={`flex ${isRight ? "justify-end" : "justify-start"}`}>
-      <div className={`relative inline-block max-w-[80%] rounded-2xl px-4 py-3 shadow-sm ${bg} ${className}`}>
-        {children}
-        {/* 꼬리 */}
-        <span
-          aria-hidden
-          className={`absolute top-3 ${isRight ? "-right-1" : "-left-1"} h-3 w-3 rotate-45 ${tailBg}`}
-        />
+    <div
+      className={`w-full flex ${isLeft ? "justify-start" : "justify-end"} my-3`}
+    >
+      <div className="relative max-w-[70%]">
+        {/* 말풍선 본체 */}
+        <div
+          className={`px-5 py-3 text-[15px] leading-7 rounded-2xl ${isLeft
+            ? "bg-white border border-[#E9E6D9] text-[#3B3B3B] rounded-bl-sm"
+            : "bg-[#89B364] text-white rounded-br-sm"
+            }`}
+        >
+          {children}
+        </div>
+
+        {/* 꼬리 부분 */}
+        {isLeft ? (
+          <span className="absolute -left-2 top-3 w-0 h-0 border-t-8 border-b-8 border-r-8 border-t-transparent border-b-transparent border-r-[#E9E6D9]">
+            <span className="absolute -top-2 w-0 h-0 border-t-8 border-b-8 border-r-8 border-t-transparent border-b-transparent border-r-white" />
+          </span>
+        ) : (
+          <span className="absolute -right-2 top-3 w-0 h-0 border-t-8 border-b-8 border-l-8 border-t-transparent border-b-transparent border-l-[#89B364]" />
+        )}
       </div>
     </div>
   );
