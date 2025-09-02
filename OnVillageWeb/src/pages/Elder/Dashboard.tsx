@@ -5,6 +5,7 @@ import HeaderEld from "../../components/layout/HeaderEld";
 import VoiceBubble from "../../components/elder/VoiceBubble";
 import MicButton from "../../components/elder/MicButton";
 import ElderAvatar, { type Mood } from "../../components/elder/ElderAvatar";
+import VoiceLog from "../../components/elder/VoiceLog";
 
 type Utt = { id: string; role: "agent" | "user"; text: string };
 
@@ -24,7 +25,7 @@ export default function ElderDashboard() {
   ]);
 
   // 마이크 버튼(보이스 SDK 붙이면 onStart/onEnd에서 이 함수와 동일하게 호출)
-  const toggleMic = () => setListening(v => !v);
+  // const toggleMic = () => setListening(v => !v);
 
   // STT 진행 중 → listening
   useEffect(() => {
@@ -93,7 +94,12 @@ export default function ElderDashboard() {
             <span className="font-semibold">‘기쁨아’</span>라고 부르면 대화가 시작됩니다
           </p>
 
-          <MicButton listening={listening} onClick={toggleMic} />
+          <div className="flex gap-2 justify-center mt-8 md:mt-10">
+            <MicButton mode="handsfree" />
+            <MicButton mode="hold" />
+          </div>
+          {/* <VoiceLog /> */}
+          <VoiceLog />
         </div>
       </main>
     </div>

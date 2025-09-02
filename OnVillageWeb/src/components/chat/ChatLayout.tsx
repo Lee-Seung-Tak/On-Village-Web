@@ -1,11 +1,11 @@
-// src/components/chat/Layout.tsx
+// src/components/chat/ChatLayout.tsx
 
-import ChatBubble from "./ChatBubble";
+
 import ChatInput from "./ChatInput";
 import { useState } from "react";
 
 export default function ChatLayout() {
-  const [messages, setMessages] = useState([
+  const [, setMessages] = useState([
     { sender: "gov", message: "시나리오가 완성됐습니다!\n전체 흐름은 이렇게 구성되었어요:" },
     { sender: "user", message: "좋아 이렇게 숏폼 제작해줘" },
   ]);

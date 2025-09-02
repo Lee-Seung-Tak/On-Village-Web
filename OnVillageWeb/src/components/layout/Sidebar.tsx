@@ -1,8 +1,8 @@
 // src/components/layout/Sidebar.tsx
+import { useNavigate } from "react-router-dom";
 
 type Props = {
   current: "chat" | "list";
-  onClickMenu?: (key: "chat" | "list") => void;
 };
 
 const Item = ({
@@ -26,24 +26,24 @@ const Item = ({
   </button>
 );
 
-export default function Sidebar({ current, onClickMenu }: Props) {
+export default function Sidebar({ current }: Props) {
+  const navigate = useNavigate();
+
   return (
-    <aside className="hidden md:block w-[240px] border-r border-[#E9E6D9] bg-[#FFFDF5]">
-      <div className="px-6 py-6">
-        <Item
-          active={current === "chat"}
-          icon="/images/icon_chat.svg"
-          label="숏폼 제작하기"
-          onClick={() => onClickMenu?.("chat")}
-        />
-        <div className="h-3" />
-        <Item
-          active={current === "list"}
-          icon="/images/icon_list.svg"
-          label="제작물 리스트"
-          onClick={() => onClickMenu?.("list")}
-        />
-      </div>
-    </aside>
+    <div className="px-6 py-6">
+      <Item
+        active={current === "chat"}
+        icon="/images/icon_chat.svg"
+        label="숏폼 제작하기"
+        onClick={() => navigate("/gov/chat")}
+      />
+      <div className="h-3" />
+      <Item
+        active={current === "list"}
+        icon="/images/icon_list.svg"
+        label="제작물 리스트"
+        onClick={() => navigate("/gov/list")}
+      />
+    </div>
   );
 }

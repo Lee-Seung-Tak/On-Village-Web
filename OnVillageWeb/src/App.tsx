@@ -9,8 +9,9 @@ import GovChat from "./pages/Gov/Chat";
 import GovList from "./pages/Gov/List";
 import Terms from "./pages/Legal/Terms";
 import Privacy from "./pages/Legal/Privacy";
-import Header from "./components/layout/Header";
+// import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
+
 
 export default function App() {
   return (

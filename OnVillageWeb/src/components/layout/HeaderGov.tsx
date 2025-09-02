@@ -43,7 +43,7 @@ export default function HeaderGov({ onOpenMenu, userName = "000님" }: Props) {
           {open && (
             <div
               onMouseLeave={() => setOpen(false)}
-              className="absolute right-0 mt-2 w-40 rounded-lg border border-[#E9E6D9] bg-white shadow-sm"
+              className="absolute right-0 mt-2 w-40 rounded-lg border border-[#E9E6D9] bg-white shadow-sm z-10"
             >
               <div className="px-4 py-3 text-sm text-[#4A4A4A]">{userName}</div>
               <button

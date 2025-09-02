@@ -16,7 +16,7 @@ export default function ChatBubble({ side, children }: Props) {
         {/* 말풍선 본체 */}
         <div
           className={`px-5 py-3 text-[15px] leading-7 rounded-2xl ${isLeft
-            ? "bg-white border border-[#E9E6D9] text-[#3B3B3B] rounded-bl-sm"
+            ? "bg-white text-[#3B3B3B] rounded-bl-sm"
             : "bg-[#89B364] text-white rounded-br-sm"
             }`}
         >
