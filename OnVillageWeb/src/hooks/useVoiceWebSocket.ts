@@ -15,6 +15,10 @@ export type VoiceWsOptions = {
   statusKey?: string;
   /** 서버가 base64 오디오를 담아 보내는 JSON key (기본: "audio_base64") */
   audioKey?: string;
+  /** 서버가 에이전트 텍스트를 담아 보내는 JSON key (기본: "text") */
+  textKey?: string;
+  /** 서버가 STT 중간/최종 텍스트를 담아 보내는 JSON key (기본: "transcript") */
+  transcriptKey?: string;
   /** 마이크 샘플레이트 (백엔드 16k 맞춤) */
   sampleRate?: number;
 };
@@ -24,6 +28,10 @@ export type VoiceWs = {
   isConnected: boolean;
   isSpeaking: boolean;
   isPushToTalk: boolean;
+  /** 서버가 보낸 최신 에이전트 텍스트 */
+  agentText: string;
+  /** 사용자 STT(필요 시 사용) */
+  transcript: string;
   log: string[];
   /** 연속(핸즈프리) 스트리밍 시작/중지 */
   startStream: () => Promise<void>;
@@ -40,12 +48,14 @@ export type VoiceWs = {
 
 const defaultUrl =
   import.meta.env.VITE_WS_URL ??
-  (location.protocol === "https:" ? `wss://dev.on-village.com/ws` : `ws://dev.on-village.com/ws`);
+  "wss://www.on-village.com/ws";
 
 export function useVoiceWebSocket(opts?: VoiceWsOptions): VoiceWs {
   const url = opts?.url ?? defaultUrl;
   const statusKey = opts?.statusKey ?? "code";
   const audioKey = opts?.audioKey ?? "audio_base64";
+  const textKey = opts?.textKey ?? "text";
+  const transcriptKey = opts?.transcriptKey ?? "transcript";
   const desiredSampleRate = opts?.sampleRate ?? 16000;
 
   // refs
@@ -55,6 +65,7 @@ export function useVoiceWebSocket(opts?: VoiceWsOptions): VoiceWs {
   const sourceNodeRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const processorRef = useRef<ScriptProcessorNode | ScriptProcessorNode | null>(null);
   const pushStreamRef = useRef<MediaStream | null>(null);
+  const geoTimerRef = useRef<number | null>(null);
 
   // state
   const [status, setStatus] = useState<AgentStatus>(0);
@@ -62,6 +73,8 @@ export function useVoiceWebSocket(opts?: VoiceWsOptions): VoiceWs {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPushToTalk, setIsPushToTalk] = useState(false);
   const [log, setLog] = useState<string[]>([]);
+  const [agentText, setAgentText] = useState("");
+  const [transcript, setTranscript] = useState("");
 
   const appendLog = useCallback((msg: string) => {
     setLog((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`].slice(-400));
@@ -77,6 +90,23 @@ export function useVoiceWebSocket(opts?: VoiceWsOptions): VoiceWs {
     ws.onopen = () => {
       setIsConnected(true);
       appendLog("WebSocket 연결 성공");
+      console.log("WebSocket connected");
+      // 주기적으로 위치 전송 (1초)
+      if (geoTimerRef.current) window.clearInterval(geoTimerRef.current);
+      geoTimerRef.current = window.setInterval(() => {
+        if (!("geolocation" in navigator)) return;
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            appendLog(`위치 전송: ${lat.toFixed(5)},${lon.toFixed(5)}`);
+            try { sendJson({ event: "location", lat, lon }); } catch { }
+          },
+          (error) => {
+            appendLog(`위치 오류: ${error.message}`);
+          }
+        );
+      }, 1000);
     };
 
     ws.onmessage = async (evt) => {
@@ -91,6 +121,16 @@ export function useVoiceWebSocket(opts?: VoiceWsOptions): VoiceWs {
 
         const code: AgentStatus | undefined = data?.[statusKey];
         if (typeof code === "number") setStatus(code);
+
+        // 텍스트 업데이트 처리 (옵션 키 기반)
+        const maybeAgentText = data?.[textKey];
+        if (typeof maybeAgentText === "string") {
+          setAgentText(maybeAgentText);
+        }
+        const maybeTranscript = data?.[transcriptKey];
+        if (typeof maybeTranscript === "string") {
+          setTranscript(maybeTranscript);
+        }
 
         switch (code) {
           case 0: // idle
@@ -143,12 +183,14 @@ export function useVoiceWebSocket(opts?: VoiceWsOptions): VoiceWs {
       setIsConnected(false);
       appendLog("WebSocket 종료");
       wsRef.current = null;
+      if (geoTimerRef.current) { window.clearInterval(geoTimerRef.current); geoTimerRef.current = null; }
     };
-  }, [appendLog, url, statusKey, audioKey]);
+  }, [appendLog, url, statusKey, audioKey, textKey, transcriptKey]);
 
   const disconnect = useCallback(() => {
     wsRef.current?.close();
     wsRef.current = null;
+    if (geoTimerRef.current) { window.clearInterval(geoTimerRef.current); geoTimerRef.current = null; }
   }, []);
 
   const sendJson = useCallback((obj: unknown) => {
@@ -304,6 +346,8 @@ export function useVoiceWebSocket(opts?: VoiceWsOptions): VoiceWs {
     isConnected,
     isSpeaking,
     isPushToTalk,
+    agentText,
+    transcript,
     log,
     startStream,
     stopStream,

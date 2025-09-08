@@ -2,7 +2,7 @@
 
 
 import { useMemo } from "react";
-import { useVoiceWebSocket } from "../../hooks/useVoiceWebSocket";
+import { useVoiceWs } from "../../contexts/VoiceWsContext";
 import MicIdle from "../../assets/icons/icon_mic_1.svg"; // 기본 아이콘
 import MicWave from "../../assets/icons/icon_mic_2.svg";   // 파형/수신 아이콘
 
@@ -23,7 +23,7 @@ export default function MicButton({ mode = "hold", className }: Props) {
     // pushToTalkStart,
     // pushToTalkStop,
     connect,
-  } = useVoiceWebSocket();
+  } = useVoiceWs();
 
   // 상태에 따른 라벨(스크린리더)
   const ariaLabel = useMemo(() => {

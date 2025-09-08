@@ -1,9 +1,9 @@
 // src/components/elder/VoiceLog.tsx
 
-import { useVoiceWebSocket } from "../../hooks/useVoiceWebSocket";
+import { useVoiceWs } from "../../contexts/VoiceWsContext";
 
 export default function VoiceLog() {
-  const { log } = useVoiceWebSocket();
+  const { log } = useVoiceWs();
   return (
     <div className="w-full max-w-lg h-64 overflow-y-auto rounded-lg bg-zinc-900 text-zinc-100 p-3 text-xs font-mono shadow">
       {log.map((l, i) => (
