@@ -1,11 +1,13 @@
 // src/components/layout/HeaderGov.tsx
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 type Props = { onOpenMenu: () => void; userName?: string };
 
-export default function HeaderGov({ onOpenMenu, userName = "000님" }: Props) {
+export default function HeaderGov({ onOpenMenu, userName = "이지윤 님" }: Props) {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <header className="h-14 md:h-16 w-full border-b border-[#E9E6D9] bg-[#FFFDF5]">
@@ -49,7 +51,12 @@ export default function HeaderGov({ onOpenMenu, userName = "000님" }: Props) {
               <button
                 className="w-full flex items-center gap-2 px-4 py-3 text-sm text-left hover:bg-[#FAF7ED]"
                 onClick={() => {
-                  // TODO: 로그아웃 처리
+                  try {
+                    // 필요한 저장 값이 있다면 여기서 정리
+                    localStorage.removeItem("govAuth");
+                  } catch { }
+                  setOpen(false);
+                  navigate("/");
                 }}
               >
                 <img src="/images/icon_logout.svg" className="w-4 h-4" />

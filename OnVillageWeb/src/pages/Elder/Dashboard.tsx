@@ -8,23 +8,18 @@ import ElderAvatar, { type Mood } from "../../components/elder/ElderAvatar";
 import VoiceLog from "../../components/elder/VoiceLog";
 import { useTypewriter } from "../../hooks/useTypewriter";
 import { VoiceWsProvider, useVoiceWs } from "../../contexts/VoiceWsContext";
+import ConsentModal from "../../components/elder/ConsentModal";
 
 type Utt = { id: string; role: "agent" | "user"; text: string };
 
 // 데모: 생각 상태로 전환을 유도할 키워드(필요시 수정)
-const triggerThinking = (t: string) =>
-  /(아파|통증|걱정|우울|어지럽|위험|119|어떡해|고민)/.test(t);
+// const triggerThinking = (t: string) =>
+//   /(아파|통증|걱정|우울|어지럽|위험|119|어떡해|고민)/.test(t);
 
 function DashboardBody() {
-  const [listening, setListening] = useState(false);
   const [mood, setMood] = useState<Mood>("idle");
-  const [utts, setUtts] = useState<Utt[]>([
-    {
-      id: "u1",
-      role: "agent",
-      text: "00님,\n오늘 날씨 정말 좋아요!\n가볍게 산책 다녀오시면 기분도 좋아질 거예요!",
-    },
-  ]);
+  const [utts, setUtts] = useState<Utt[]>([]);
+  const [showConsent, setShowConsent] = useState(false);
 
   // Typing effect for the latest agent message
   const last = utts[utts.length - 1];
@@ -70,42 +65,70 @@ function DashboardBody() {
   // 마이크 버튼(보이스 SDK 붙이면 onStart/onEnd에서 이 함수와 동일하게 호출)
   // const toggleMic = () => setListening(v => !v);
 
-  // STT 진행 중 → listening
+  // 상태 코드 + 타이핑 상황에 따라 캐릭터 이미지 변경
   useEffect(() => {
-    setMood(listening ? "listening" : "idle");
-  }, [listening]);
-
-  // 유저 발화가 들어오면 상태 전환
-  useEffect(() => {
-    const last = utts[utts.length - 1];
-    if (!last) return;
-
-    if (last.role === "user") {
-      if (triggerThinking(last.text)) {
-        setMood("tinking");      // 생각(걱정) 상태
-        const t = setTimeout(() => setMood("idle"), 4000);
-        return () => clearTimeout(t);
-      } else {
-        // 에이전트 답변 준비/재생 구간을 speaking으로 표현
-        setMood("speaking");
-        const t = setTimeout(() => setMood("idle"), 1200);
-        return () => clearTimeout(t);
-      }
+    const emergency = /(응답이 없습니다|위급한 상황|119|신고를 진행합니다)/.test(agentText ?? "") || /(살려줘)/.test((transcript ?? ""));
+    if (emergency) {
+      setMood("alert");
+      return;
     }
-  }, [utts]);
+    // 사용자가 말하는 중이면 최우선
+    if (status === 1) {
+      setMood("listening");
+      return;
+    }
+    // 에이전트가 말하는 중이거나(상태 3), 타이핑이 아직 끝나지 않았다면 speaking 유지
+    if (status === 3 || (!!agentText && !typedAgent.done)) {
+      setMood("speaking");
+      return;
+    }
+    if (status === 2) {
+      setMood("tinking");
+      return;
+    }
+    setMood("idle");
+  }, [status, agentText, transcript, typedAgent.done]);
 
-  // 데모: listening 켜면 0.8초 후 유저 발화 하나 추가
+  // (데모용 로컬 토글은 비활성화)
+  // 최초 진입 시 동의 팝업 노출(이미 선택한 경우는 생략)
   useEffect(() => {
-    if (!listening) return;
-    const t1 = setTimeout(() => {
-      setUtts(prev => [
-        ...prev,
-        { id: crypto.randomUUID(), role: "user", text: "그럴까?" },
-      ]);
-      setListening(false);
-    }, 800);
-    return () => clearTimeout(t1);
-  }, [listening]);
+    try {
+      const key = "elderConsentStory";
+      const saved = localStorage.getItem(key);
+      if (!saved) setShowConsent(true);
+    } catch {
+      setShowConsent(true);
+    }
+  }, []);
+
+  // 복약 알림 키워드/시간 파싱 (말풍선 내부 표시용)
+  const medInfo = (() => {
+    const t = agentText ?? "";
+    if (!t) return null;
+    // 복약 시간 알림에 해당하는 문장만 감지 ("약 드실 시간"/"복약 시간"/"복약 알림")
+    const isMed = /(드실\s*시간|복약\s*(?:시간|알림)|약\s*드실\s*시간)/.test(t);
+    if (!isMed) return null;
+    let timeStr: string | undefined;
+    const m1 = t.match(/(오전|오후)\s*(\d{1,2})(?:[:시]\s*(\d{1,2}))?/);
+    const m2 = t.match(/(\d{1,2})\s*시\s*(\d{1,2})?\s*분?/);
+    if (m1) {
+      const ap = m1[1];
+      const hh = m1[2];
+      const mm = m1[3] ?? "00";
+      timeStr = `${ap} ${hh}:${mm.padStart(2, "0")}`;
+    } else if (m2) {
+      const hh = m2[1];
+      const mm = (m2[2] ?? "00").toString();
+      timeStr = `${hh}:${mm.padStart(2, "0")}`;
+    } else if (/아침/.test(t)) {
+      timeStr = "08:00";
+    } else if (/점심/.test(t)) {
+      timeStr = "12:00";
+    } else if (/저녁/.test(t)) {
+      timeStr = "18:00";
+    }
+    return { time: timeStr } as { time?: string };
+  })();
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF7ED]">
@@ -113,6 +136,17 @@ function DashboardBody() {
 
       <main className="flex-1">
         <div className="mx-auto max-w-[1200px] px-4 md:px-6 py-8 md:py-12">
+          <ConsentModal
+            open={showConsent}
+            onAgree={() => {
+              try { localStorage.setItem("elderConsentStory", "agree"); } catch {}
+              setShowConsent(false);
+            }}
+            onDisagree={() => {
+              try { localStorage.setItem("elderConsentStory", "disagree"); } catch {}
+              setShowConsent(false);
+            }}
+          />
           {/* 캐릭터: 크기 키움 */}
           <div className="flex justify-center">
             <ElderAvatar
@@ -123,20 +157,33 @@ function DashboardBody() {
 
           {/* 말풍선: 캐릭터와 겹치게 (Tailwind JIT: -mt-[px] 허용) */}
           {(() => {
-            const showUserLive = status === 1 && (transcript?.trim()?.length ?? 0) > 0;
-            const role = showUserLive ? "user" : agentText ? "agent" : (last?.role ?? "agent");
+            // 청취(status===1) 시에는 transcript 길이와 무관하게 사용자 말풍선을 먼저 노출해
+            // 직전 에이전트 말풍선이 잔상처럼 보이지 않도록 함
+            const showUserLive = status === 1;
+            const role = showUserLive ? "user" : (agentText ? "agent" : (last?.role ?? "agent"));
             const text = showUserLive
               ? transcript
               : agentText
                 ? typedAgent.text
-                : (isAgentLast ? typed.text : last?.text ?? "");
+                : (isAgentLast ? typed.text : (last?.text ?? ""));
             return (
               <VoiceBubble
                 key={last?.id}
                 role={role}
                 className="-mt-[120px] md:-mt-[130px] relative z-20"
               >
-                <p className="whitespace-pre-line">{text}</p>
+                {role === "agent" && medInfo ? (
+                  <div>
+                    <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#F4A241]/40 bg-[#FFF3E4] px-3 py-1 text-[16px] font-semibold text-[#B46300]">
+                      <span aria-hidden>🔔</span>
+                      <span>복약 알림</span>
+                      {medInfo.time ? <span className="text-[#8B5E00]">· {medInfo.time}</span> : null}
+                    </div>
+                    <p className="whitespace-pre-line">{text}</p>
+                  </div>
+                ) : (
+                  <p className="whitespace-pre-line">{text}</p>
+                )}
               </VoiceBubble>
             );
           })()}
@@ -160,7 +207,7 @@ function DashboardBody() {
 
 export default function ElderDashboard() {
   return (
-    <VoiceWsProvider>
+    <VoiceWsProvider options={{ url: 'demo' }}>
       <DashboardBody />
     </VoiceWsProvider>
   );
