@@ -13,10 +13,11 @@ export default function List() {
   const [drawer, setDrawer] = useState(false);
   const [selected, setSelected] = useState<Item | null>(null);
   const [open, setOpen] = useState(false);
-  // 임시: 사용 용량/제한 (추후 API 연동)
-  const usedBytes = 2.1 * 1024 * 1024 * 1024; // 2.1GB 예시
+  // 저장 용량/제한 (데모: 5GB 고정), 실제에선 API 응답 사용
   const limitBytes = 5 * 1024 * 1024 * 1024; // 5GB 예시
-  const usagePct = Math.min(100, Math.round((usedBytes / limitBytes) * 100));
+  const [sizes, setSizes] = useState<Record<string, number>>({}); // id -> bytes
+  const usedBytes = Object.values(sizes).reduce((a, b) => a + b, 0);
+  const usagePct = Math.min(100, limitBytes ? Math.round((usedBytes / limitBytes) * 100) : 0);
   const formatBytes = (n: number) => {
     const gb = 1024 * 1024 * 1024;
     const mb = 1024 * 1024;
@@ -49,12 +50,12 @@ export default function List() {
                 ctx.drawImage(v, 0, 0, w, h);
                 setThumb(c.toDataURL('image/jpeg', 0.85));
               }
-            } catch {}
+            } catch { }
             v.removeEventListener('seeked', onSeeked);
           };
           v.addEventListener('seeked', onSeeked);
-          try { v.currentTime = seekTo; } catch {}
-        } catch {}
+          try { v.currentTime = seekTo; } catch { }
+        } catch { }
       };
       v.addEventListener('loadedmetadata', gen);
       v.addEventListener('loadeddata', gen);
@@ -76,12 +77,13 @@ export default function List() {
   // 샘플 데이터 (실제에선 API 결과로 채우기)
   const [items, setItems] = useState<Item[]>([
     // 데모 영상 항목 (다운로드/미리보기용)
-    { id: "demo1", title: "오서산 억새밭 영상", date: "2025.9.1", thumbnail: "", videoUrl: "/media/demo1.mp4" },
-    { id: "demo2", title: "데모 영상 2", date: "2025.9.2", thumbnail: "", videoUrl: "/media/demo2.mp4" },
-    { id: "demo3", title: "데모 영상 3", date: "2025.9.3", thumbnail: "", videoUrl: "/media/demo3.mp4" },
-    { id: "demo4", title: "데모 영상 4", date: "2025.9.4", thumbnail: "", videoUrl: "/media/demo4.mp4" },
-    { id: "demo5", title: "데모 영상 5", date: "2025.9.5", thumbnail: "", videoUrl: "/media/demo5.mp4" },
-    { id: "demo6", title: "데모 영상 6", date: "2025.9.6", thumbnail: "", videoUrl: "/media/demo6.mp4" },
+    { id: "demo1", title: "수달이의 캠핑", date: "2025.9.1", thumbnail: "", videoUrl: "/media/demo7.mp4" },
+    { id: "demo2", title: "오서산 억새밭 영상", date: "2025.9.1", thumbnail: "", videoUrl: "/media/demo1.mp4" },
+    { id: "demo3", title: "할머니의 미래상상", date: "2025.9.2", thumbnail: "", videoUrl: "/media/demo2.mp4" },
+    { id: "demo4", title: "할아버지의 옛날이야기", date: "2025.9.3", thumbnail: "", videoUrl: "/media/demo3.mp4" },
+    { id: "demo5", title: "지역축제", date: "2025.9.4", thumbnail: "", videoUrl: "/media/demo4.mp4" },
+    { id: "demo6", title: "맥주축제", date: "2025.9.5", thumbnail: "", videoUrl: "/media/demo5.mp4" },
+    { id: "demo7", title: "나무아래서", date: "2025.9.6", thumbnail: "", videoUrl: "/media/demo6.mp4" },
   ]);
 
   const openViewer = (it: Item) => {
@@ -111,12 +113,66 @@ export default function List() {
 
   const onDelete = (it: Item) => {
     setItems(prev => prev.filter(x => x.id !== it.id));
+    setSizes(prev => {
+      const cp = { ...prev };
+      delete cp[it.id];
+      return cp;
+    });
     if (selected?.id === it.id) {
       setOpen(false);
       setSelected(null);
     }
     console.log("삭제", it.id);
   };
+
+  // 비디오 파일 크기 계산(HEAD 또는 Range)
+  useEffect(() => {
+    let alive = true;
+    const controller = new AbortController();
+    const getSize = async (url: string): Promise<number | null> => {
+      try {
+        // 1) HEAD로 Content-Length 시도
+        const r1 = await fetch(url, { method: 'HEAD', signal: controller.signal });
+        const len = r1.headers.get('content-length') || r1.headers.get('Content-Length');
+        if (r1.ok && len) {
+          const n = parseInt(len, 10);
+          if (!Number.isNaN(n) && n > 0) return n;
+        }
+      } catch { }
+      try {
+        // 2) Range GET으로 Content-Range에서 총 용량 파싱
+        const r2 = await fetch(url, {
+          method: 'GET',
+          headers: { Range: 'bytes=0-0' },
+          signal: controller.signal,
+        });
+        const cr = r2.headers.get('content-range') || r2.headers.get('Content-Range');
+        if (cr) {
+          const m = /\/(\d+)$/.exec(cr);
+          if (m) {
+            const n = parseInt(m[1], 10);
+            if (!Number.isNaN(n) && n > 0) return n;
+          }
+        }
+      } catch { }
+      return null;
+    };
+
+    const fetchMissing = async () => {
+      for (const it of items) {
+        if (!it.id) continue;
+        if (sizes[it.id] != null) continue;
+        if (!it.videoUrl) continue;
+        const n = await getSize(it.videoUrl);
+        if (!alive) return;
+        if (n != null) {
+          setSizes(prev => ({ ...prev, [it.id]: n }));
+        }
+      }
+    };
+    fetchMissing();
+    return () => { alive = false; controller.abort(); };
+  }, [items, sizes]);
 
   return (
     <div className="h-screen flex flex-col bg-[#FAF7ED]">

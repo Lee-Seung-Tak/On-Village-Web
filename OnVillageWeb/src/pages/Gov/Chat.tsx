@@ -29,34 +29,40 @@ export default function Chat() {
     // AI 첫 인사
     { role: "ai", text: "안녕하세요! 어떤 이야기를 영상으로 만들어드릴까요?" },
     // 2. 스토리 추천 받기
-    { role: "gov", text: "이번 주 어떤 이야기를 영상으로 만들면 좋을까?" },
+    { role: "gov", text: "어르신 대화에서 영상으로 만들만한 좋은 이야기가 있을까?" },
     {
       role: "ai", text: [
-        "추천드리는 이야기는 두 가지입니다.",
-        "1. ‘오서산 억새밭, 억새가 산을 가득 덮던 모습’",
-        "2. ‘대천해수욕장에서 가족과 놀던 추억’",
+        "어르신 대화에서 추천드리는 이야기는 두 가지입니다.",
+        "1.  '충주산 캠핑장' 아이디어를 발견 했습니다. 충주 지자체 이미지인 수달 이미지를 제안합니다",
+        "2.  '한국 민속촌' 아이디어를 발견 했습니다. 용인 지자체 이미지인 용 이미지를 제안합니다",
       ].join("\n")
     },
     // 3. 스토리 선택
-    { role: "gov", text: "2번 오서산 억새밭 이야기를 영상으로 만들어줘." },
-    { role: "ai", text: "네, 시나리오 초안을 작성하겠습니다." },
+    { role: "gov", text: "1번 충주산 캠핑장 이야기를 수달 이미지를 사용해서 영상으로 만들어줘." },
+    { role: "ai", text: "네, 충주산 캠핑장으로 영상 시나리오를 생성 하겠습니다." },
     // 4. 시나리오 초안 받기
     {
       role: "ai", text: [
-        "씬 : 햇살이 비치는 공원 벤치.",
-        " 어르신이 청년과 담소를 나눈다.",
-        " 어르신: ‘오서산 억새밭이 생각나네. 은빛 억새가 산을 가득 덮던 모습이 아직도 눈에 선해.’ ",
+        " 시나리오 : 충주산 캠핑장의 단풍을 즐기는 수달.",
+        " 장면 진행: 수달이 호기심 -> 탐험 -> 발견 -> 즐거움 -> 만족감 순서대로 장면이 진행",
+        " 배경: 밝고 따듯한 동화적 스타일",
+        " 상황: 클로즈업으로 눈과 꽃잎 디테일 포착",
+        " 카메라: 수달 얼굴 중심 구도",
+
+        "이대로 진행해도 될까요 ?"
       ].join("\n")
     },
-    { role: "gov", text: "대사를 한다음에 억새밭이 나왔으면 좋겠어" },
+    { role: "gov", text: "마지막 장면에는 저녁 야영을 즐기는 모습이 나왔으면 좋겠어." },
     // 5. 시나리오 수정
     {
       role: "ai", text: [
-        "씬 : 햇살이 비치는 공원 벤치.",
-        " 어르신과 청년이 나란히 앉아 대화를 나눈다.",
-        " ‘내가 어렸을 때 오서산 억새밭 뒤에서 자주 놀았는데 정말 예뻤어.’라고 한 뒤",
-        "\t\t  오서산 억새밭이 펼쳐집니다.",
-        " 어르신이 말하자 화면이 회상 장면으로 전환된다.",
+        " 시나리오 : 충주산 캠핑장의 단풍을 즐기는 수달. 저녁 야영을 즐기는 모습으로 마무리",
+        " 장면 진행: 수달이 호기심 -> 탐험 -> 발견 -> 즐거움 -> 만족감 순서대로 장면이 진행",
+        " 배경: 밝고 따듯한 동화적 스타일",
+        " 상황: 클로즈업으로 눈과 꽃잎 디테일 포착",
+        " 카메라: 수달 얼굴 중심 구도",
+
+        "이대로 진행해도 될까요 ?"
       ].join("\n")
     },
     { role: "gov", text: "응, 이대로 진행하자." },
@@ -77,49 +83,197 @@ export default function Chat() {
   const didInitRef = useRef(false);
 
   function AutoPosterVideo({ src }: { src: string }) {
+    // No-flicker: show generated thumbnail until the first frame is ready
     const vRef = useRef<HTMLVideoElement | null>(null);
-    const [poster, setPoster] = useState<string | undefined>(undefined);
+    const [thumb, setThumb] = useState<string | null>(null);
+    const [videoReady, setVideoReady] = useState(false);
+    const [needsTap, setNeedsTap] = useState(false);
+
+    // Generate a thumbnail off-DOM to avoid seeking/flicker on the shown element
+    useEffect(() => {
+      let loader: HTMLVideoElement | null = document.createElement('video');
+      const seekTo = 0.12; // move off exact 0s in case of black frames
+      let cleaned = false;
+
+      const cleanup = () => {
+        if (cleaned) return;
+        cleaned = true;
+        if (loader) {
+          try {
+            loader.pause();
+            loader.removeAttribute('src');
+            // @ts-ignore: load exists
+            loader.load?.();
+          } catch {}
+        }
+        loader = null;
+      };
+
+      if (!loader) return cleanup;
+      try {
+        loader.src = src;
+        loader.muted = true;
+        loader.playsInline = true as any;
+        loader.preload = 'metadata';
+        const onSeeked = () => {
+          try {
+            const w = loader!.videoWidth || 640;
+            const h = loader!.videoHeight || 360;
+            const c = document.createElement('canvas');
+            c.width = w; c.height = h;
+            const ctx = c.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(loader as HTMLVideoElement, 0, 0, w, h);
+              setThumb(c.toDataURL('image/jpeg', 0.85));
+            }
+          } catch {}
+          cleanup();
+        };
+        const onLoaded = () => {
+          try { loader!.currentTime = seekTo; }
+          catch { onSeeked(); }
+        };
+        loader.addEventListener('loadeddata', onLoaded, { once: true } as any);
+        loader.addEventListener('loadedmetadata', onLoaded, { once: true } as any);
+      } catch {
+        cleanup();
+      }
+
+      return cleanup;
+    }, [src]);
+
+    // Reveal the actual video only after first frame is ready to paint
     useEffect(() => {
       const v = vRef.current;
       if (!v) return;
-      const gen = () => {
-        try {
-          const seekTo = Math.min(0.15, (v.duration || 1) * 0.05);
-          const onSeeked = () => {
-            try {
-              const w = v.videoWidth || 640;
-              const h = v.videoHeight || 360;
-              const c = document.createElement('canvas');
-              c.width = w; c.height = h;
-              const ctx = c.getContext('2d');
-              if (ctx) {
-                ctx.drawImage(v, 0, 0, w, h);
-                setPoster(c.toDataURL('image/jpeg', 0.85));
-              }
-            } catch { }
-            v.removeEventListener('seeked', onSeeked);
-          };
-          v.addEventListener('seeked', onSeeked);
-          try { v.currentTime = seekTo; } catch { }
-        } catch { }
+      let done = false;
+      let watchdog: number | null = null;
+
+      const readyNow = () => {
+        if (!done) { done = true; setVideoReady(true); }
       };
-      v.addEventListener('loadedmetadata', gen);
-      v.addEventListener('loadeddata', gen);
+      const tryFrame = () => {
+        const anyV: any = v as any;
+        if (typeof anyV.requestVideoFrameCallback === 'function') {
+          anyV.requestVideoFrameCallback(() => {
+            try { v.pause(); } catch {}
+            window.setTimeout(readyNow, 30);
+          });
+        } else {
+          try { v.pause(); } catch {}
+          window.setTimeout(readyNow, 60);
+        }
+      };
+      const onBaseReady = () => tryFrame();
+
+      // If already sufficiently loaded (e.g., cache), reveal immediately
+      try {
+        if (v.readyState >= (v.HAVE_CURRENT_DATA ?? 2)) {
+          tryFrame();
+        }
+      } catch {}
+
+      v.addEventListener('canplay', onBaseReady, { once: true } as any);
+      v.addEventListener('loadeddata', onBaseReady, { once: true } as any);
+      v.addEventListener('canplaythrough', onBaseReady, { once: true } as any);
+
+      // Watchdog: if nothing fired but data is present later, unstick
+      watchdog = window.setTimeout(() => {
+        try {
+          if (!done && v.readyState >= (v.HAVE_CURRENT_DATA ?? 2)) {
+            tryFrame();
+          }
+          if (!done && v.readyState < (v.HAVE_METADATA ?? 1)) {
+            // Likely blocked by autoplay policy; request user interaction
+            setNeedsTap(true);
+          }
+        } catch {}
+      }, 1500);
+
       return () => {
-        v.removeEventListener('loadedmetadata', gen);
-        v.removeEventListener('loadeddata', gen);
+        try {
+          v.removeEventListener('canplay', onBaseReady as any);
+          v.removeEventListener('loadeddata', onBaseReady as any);
+          v.removeEventListener('canplaythrough', onBaseReady as any);
+        } catch {}
+        if (watchdog) {
+          try { window.clearTimeout(watchdog); } catch {}
+        }
       };
     }, [src]);
+
+    const kickstart = () => {
+      const v = vRef.current;
+      if (!v) return;
+      try {
+        v.muted = true;
+        (v as any).playsInline = true;
+        v.play().then(() => {
+          // Pause on first painted frame then reveal
+          const anyV: any = v as any;
+          if (typeof anyV.requestVideoFrameCallback === 'function') {
+            anyV.requestVideoFrameCallback(() => {
+              try { v.pause(); } catch {}
+              setVideoReady(true);
+              setNeedsTap(false);
+            });
+          } else {
+            setTimeout(() => {
+              try { v.pause(); } catch {}
+              setVideoReady(true);
+              setNeedsTap(false);
+            }, 80);
+          }
+        }).catch(() => {
+          // If play still blocked, keep tap overlay
+          setNeedsTap(true);
+        });
+      } catch {
+        setNeedsTap(true);
+      }
+    };
+
     return (
-      <video
-        ref={vRef}
-        className="w-full max-w-[560px] rounded-lg border border-[#EFEDE4]"
-        style={{ aspectRatio: '16 / 9', maxHeight: 320 }}
-        src={src}
-        controls
-        playsInline
-        poster={poster}
-      />
+      <div className="relative w-full max-w-[560px] rounded-lg border border-[#EFEDE4] overflow-hidden" style={{ maxHeight: 320 }}>
+        {/* aspect-ratio without relying on CSS aspect-ratio support */}
+        <div className="pt-[56.25%]" />
+
+        {/* Overlay placeholder (thumb or spinner) */}
+        {!videoReady && (
+          <button
+            type="button"
+            onClick={needsTap ? kickstart : undefined}
+            className="absolute inset-0 flex items-center justify-center bg-[#F7F4EA]"
+          >
+            {thumb ? (
+              <img src={thumb} alt="thumbnail" className="absolute inset-0 w-full h-full object-cover" />
+            ) : (
+              <div className="w-8 h-8 rounded-full border-2 border-[#D9D4C7] border-t-[#67A462] animate-spin" />
+            )}
+            {needsTap && (
+              <div className="relative z-10 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/50 text-white text-sm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+                탭하여 로드
+              </div>
+            )}
+          </button>
+        )}
+
+        {/* Actual video (fades in) */}
+        <video
+          ref={vRef}
+          className="absolute inset-0 w-full h-full"
+          style={{ opacity: videoReady ? 1 : 0, transition: 'opacity 180ms ease-out' }}
+          src={src}
+          controls
+          preload="auto"
+          muted
+          playsInline
+          autoPlay
+        />
+      </div>
     );
   }
 
@@ -288,7 +442,7 @@ export default function Chat() {
             <div className="mx-auto w-full max-w-[900px]">
               {msgs.map(m => {
                 const isFinalAi = m.side === "left" && m.text.startsWith("영상 제작이 완료되었습니다.");
-                const videoSrc = "/media/demo1.mp4"; // 데모 경로 
+                const videoSrc = "/media/demo7.mp4"; // 데모 경로 
                 // poster 이미지는 제거하고, 로딩 후 첫 프레임을 자동 표시하도록 VideoWithAutoPoster 사용
                 return (
                   <ChatBubble key={m.id} side={m.side}>
