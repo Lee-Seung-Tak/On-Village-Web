@@ -1,15 +1,32 @@
 // src/pages/Elder/Login.tsx
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import ConsentModal from "../../components/elder/ConsentModal";
 
 export default function ElderLogin() {
   const navigate = useNavigate();
+  const [showConsent, setShowConsent] = useState(false);
   const onSubmit: React.FormEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault();
-    navigate("/elder/chat"); // 아직 페이지 없으면 임시로 "/elder" 로.
+    // 로그인 버튼 클릭 시 동의 팝업 먼저 노출
+    setShowConsent(true);
   };
 
   return (
     <section className="mx-auto flex max-w-[400px] flex-col items-center px-4 py-10 sm:px-6 md:py-25">
+      <ConsentModal
+        open={showConsent}
+        onAgree={() => {
+          try { localStorage.setItem("elderConsentStory", "agree"); } catch {}
+          setShowConsent(false);
+          navigate("/elder/chat");
+        }}
+        onDisagree={() => {
+          try { localStorage.setItem("elderConsentStory", "disagree"); } catch {}
+          setShowConsent(false);
+          navigate("/elder/chat");
+        }}
+      />
       <div className="flex items-center justify-center gap-2">
         <img src="/images/eld_logo.svg" alt="ON마을 어르신" className="h-10 w-auto sm:h-10" />
       </div>

@@ -5,7 +5,7 @@ import HeaderEld from "../../components/layout/HeaderEld";
 import VoiceBubble from "../../components/elder/VoiceBubble";
 import MicButton from "../../components/elder/MicButton";
 import ElderAvatar, { type Mood } from "../../components/elder/ElderAvatar";
-import VoiceLog from "../../components/elder/VoiceLog";
+// import VoiceLog from "../../components/elder/VoiceLog";
 import { useTypewriter } from "../../hooks/useTypewriter";
 import { VoiceWsProvider, useVoiceWs } from "../../contexts/VoiceWsContext";
 import ConsentModal from "../../components/elder/ConsentModal";
@@ -34,8 +34,8 @@ function DashboardBody() {
   // transcript 변화를 실시간 유저 말풍선으로 반영
   useEffect(() => {
     const t = transcript?.trim() ?? "";
-    if (status === 1) {
-      // listening 중: 라이브 말풍선 갱신/생성
+    if (status === 1 || status === 2) {
+      // 청취/생각 중에는 들어오는 STT를 계속 같은 말풍선에 반영
       if (t.length === 0) return;
       if (!liveUserIdRef.current) {
         const id = crypto.randomUUID();
@@ -45,21 +45,57 @@ function DashboardBody() {
         const id = liveUserIdRef.current;
         setUtts(prev => prev.map(u => (u.id === id ? { ...u, text: t } : u)));
       }
-    } else {
-      // listening 벗어남(thinking/speaking 등): 라이브 버블 확정
-      if (liveUserIdRef.current) {
-        const id = liveUserIdRef.current;
-        // 빈 텍스트였다면 제거
-        setUtts(prev => {
-          const found = prev.find(u => u.id === id);
-          if (found && (found.text ?? "").trim().length === 0) {
-            return prev.filter(u => u.id !== id);
-          }
-          return prev;
-        });
-        liveUserIdRef.current = null;
-      }
+      return;
     }
+    // speaking(3) 또는 idle(0)로 넘어가면 라이브 버블 확정 (최신 STT로 보강)
+    if (liveUserIdRef.current) {
+      const id = liveUserIdRef.current;
+      const finalText = (transcript ?? "").trim();
+      setUtts(prev => {
+        const found = prev.find(u => u.id === id);
+        if (!found) return prev;
+        const updated = prev.map(u => (u.id === id ? { ...u, text: finalText || u.text } : u));
+        if ((finalText || found.text || "").trim().length === 0) {
+          return updated.filter(u => u.id !== id);
+        }
+        return updated;
+      });
+      liveUserIdRef.current = null;
+    }
+  }, [transcript, status]);
+
+  // 에이전트 발화가 시작되면(텍스트가 등장) 사용자 라이브 버블을 최종 스냅샷으로 보강 후 확정
+  useEffect(() => {
+    if (!agentText) return;
+    if (!liveUserIdRef.current) return;
+    const id = liveUserIdRef.current;
+    const finalText = (transcript ?? "").trim();
+    setUtts(prev => {
+      const found = prev.find(u => u.id === id);
+      if (!found) return prev;
+      const updated = prev.map(u => (u.id === id ? { ...u, text: finalText || u.text } : u));
+      if ((finalText || found.text || "").trim().length === 0) {
+        return updated.filter(u => u.id !== id);
+      }
+      return updated;
+    });
+    liveUserIdRef.current = null;
+  }, [agentText]);
+
+  // 최종 STT가 늦게 도착하는 경우(이미 확정됐더라도) 마지막 사용자 말풍선을 보강 업데이트
+  useEffect(() => {
+    const t = (transcript ?? "").trim();
+    if (!t) return;
+    if (status === 1) return; // live 업데이트는 위 effect에서 처리
+    setUtts(prev => {
+      if (!prev.length) return prev;
+      const last = prev[prev.length - 1];
+      if (last.role !== "user") return prev;
+      if ((last.text ?? "").length >= t.length) return prev;
+      const updated = prev.slice();
+      updated[updated.length - 1] = { ...last, text: t };
+      return updated;
+    });
   }, [transcript, status]);
 
   // 마이크 버튼(보이스 SDK 붙이면 onStart/onEnd에서 이 함수와 동일하게 호출)
@@ -139,11 +175,11 @@ function DashboardBody() {
           <ConsentModal
             open={showConsent}
             onAgree={() => {
-              try { localStorage.setItem("elderConsentStory", "agree"); } catch {}
+              try { localStorage.setItem("elderConsentStory", "agree"); } catch { }
               setShowConsent(false);
             }}
             onDisagree={() => {
-              try { localStorage.setItem("elderConsentStory", "disagree"); } catch {}
+              try { localStorage.setItem("elderConsentStory", "disagree"); } catch { }
               setShowConsent(false);
             }}
           />
@@ -198,7 +234,6 @@ function DashboardBody() {
             <MicButton mode="hold" />
           </div>
           {/* <VoiceLog /> */}
-          <VoiceLog />
         </div>
       </main>
     </div>

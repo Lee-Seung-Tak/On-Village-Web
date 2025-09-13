@@ -15,7 +15,7 @@ export default function Home() {
           decoding="async"
         />
 
-        <p className="mt-4 text-base text-[18px] sm:text-[25px] font-semibold text-[#3F6248]">AI로 어르신 돌봄부터</p>
+        <p className="mt-4 text-base text-[18px] sm:text-[25px] font-semibold text-[#3F6248]">AI로 어르신 말벗부터</p>
         <p className="text-base text-[18px] sm:text-[25px] font-semibold text-[#3F6248]">지역 정책 홍보·피드백까지 한 번에!</p>
       </header>
 
@@ -60,7 +60,7 @@ export default function Home() {
         {/* 어르신 카드 */}
         <Link
           to="/elder"
-          aria-label="어르신 돌봄 서비스 (어르신)"
+          aria-label="어르신 말벗 서비스 (어르신)"
           className="relative block group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
         >
           <img
@@ -82,7 +82,7 @@ export default function Home() {
                 }}
               >
                 <h3 className="text-[25px] font-semibold sm:text-[25px]">
-                  어르신 돌봄 서비스
+                  어르신 말벗 서비스
                 </h3>
                 <p className="mt-1 text-[25px] sm:text-[25px]">(어르신)</p>
               </div>

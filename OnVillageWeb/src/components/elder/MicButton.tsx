@@ -17,6 +17,7 @@ export default function MicButton({ mode = "hold", className }: Props) {
     status,
     isConnected,
     isSpeaking,
+    advanceDemo,
     // isPushToTalk,
     startStream,
     stopStream,
@@ -58,12 +59,18 @@ export default function MicButton({ mode = "hold", className }: Props) {
   // handsfree 모드 (토글)
   // ===========================
   if (mode === "handsfree") {
-    const isOn = isConnected && status !== 2; // 생각 중(2)일 때는 아이콘만 유지
+    const isOn = isConnected && status !== 2; // 연결/활성 배경 상태
+    const isAnswering = status === 1; // 사용자가 대답 중인지
     return (
       <button
         aria-label={ariaLabel}
         className={`${baseBtn} ${size} ${isOn ? orangeActive : orangeIdle} ${className ?? ""}`}
         onClick={async () => {
+          // 데모 모드: advanceDemo가 주어지면 한 턴 진행
+          if (advanceDemo) {
+            advanceDemo();
+            return;
+          }
           if (!isConnected) {
             connect();
             await startStream();
@@ -75,11 +82,11 @@ export default function MicButton({ mode = "hold", className }: Props) {
         {/* 하이라이트 링 */}
         <span
           className={`absolute inset-0 rounded-full pointer-events-none 
-            ${isOn ? "animate-pingSlow bg-orange-200/25" : ""}`}
+            ${isAnswering ? "animate-pingSlow bg-orange-200/25" : ""}`}
         />
         {/* 아이콘 */}
         <img
-          src={isOn || status === 1 ? MicWave : MicIdle}
+          src={isAnswering ? MicWave : MicIdle}
           alt=""
           className={`${icon} drop-shadow-[0_1px_0_rgba(0,0,0,0.15)]`}
         />

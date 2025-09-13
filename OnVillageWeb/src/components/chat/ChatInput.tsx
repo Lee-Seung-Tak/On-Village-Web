@@ -4,8 +4,10 @@ import { useState } from "react";
 
 export default function ChatInput({
   onSend,
+  placeholder = "제작하고 싶은 홍보물 내용을 입력하세요",
 }: {
   onSend: (text: string) => void;
+  placeholder?: string;
 }) {
   const [text, setText] = useState("");
 
@@ -24,7 +26,7 @@ export default function ChatInput({
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send()}
-            placeholder="제작하고 싶은 홍보물 내용을 입력하세요"
+            placeholder={placeholder}
             className="flex-1 h-12 rounded-full border border-[#E0E0E0] bg-white px-5 text-[15px] placeholder:text-[#B9B9B9] focus:outline-none"
           />
           <button

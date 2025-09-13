@@ -33,6 +33,8 @@ export type VoiceWs = {
   /** 사용자 STT(필요 시 사용) */
   transcript: string;
   log: string[];
+  /** 데모 모드 전용: 한 턴 진행 (실서버에선 undefined) */
+  advanceDemo?: () => void;
   /** 연속(핸즈프리) 스트리밍 시작/중지 */
   startStream: () => Promise<void>;
   stopStream: () => void;
@@ -349,6 +351,7 @@ export function useVoiceWebSocket(opts?: VoiceWsOptions): VoiceWs {
     agentText,
     transcript,
     log,
+    advanceDemo: undefined,
     startStream,
     stopStream,
     pushToTalkStart,
