@@ -33,14 +33,14 @@ export default function Chat() {
     {
       role: "ai", text: [
         "어르신 대화에서 추천드리는 이야기는 두 가지입니다.",
-        "1.  '충주산 캠핑장' 아이디어를 발견 했습니다. 충주 지자체 이미지인 수달 이미지를 제안합니다",
-        "2.  '한국 민속촌' 아이디어를 발견 했습니다. 용인 지자체 이미지인 용 이미지를 제안합니다",
+        "1.  '충주산 캠핑장 이야기'. 충주의 상징인 수달 이미지를 함께하면 더욱 의미가 깊을 것 같습니다.",
+        "2.  '충주 사과 축제 이야기'. 충주를 대표하는 사과 이미지를 곁들이면 한층 따뜻한 느낌을 줄 수 있을 것 같습니다.",
       ].join("\n")
     },
     // 3. 스토리 선택
     { role: "gov", text: "1번 충주산 캠핑장 이야기를 수달 이미지를 사용해서 영상으로 만들어줘." },
     { role: "ai", text: "네, 충주산 캠핑장으로 영상 시나리오를 생성 하겠습니다." },
-    // 4. 시나리오 초안 받기
+    // 4. 시나리오 초안 받기ㅍ
     {
       role: "ai", text: [
         " 시나리오 : 충주산 캠핑장의 단풍을 즐기는 수달.",
@@ -104,7 +104,7 @@ export default function Chat() {
             loader.removeAttribute('src');
             // @ts-ignore: load exists
             loader.load?.();
-          } catch {}
+          } catch { }
         }
         loader = null;
       };
@@ -126,7 +126,7 @@ export default function Chat() {
               ctx.drawImage(loader as HTMLVideoElement, 0, 0, w, h);
               setThumb(c.toDataURL('image/jpeg', 0.85));
             }
-          } catch {}
+          } catch { }
           cleanup();
         };
         const onLoaded = () => {
@@ -156,11 +156,11 @@ export default function Chat() {
         const anyV: any = v as any;
         if (typeof anyV.requestVideoFrameCallback === 'function') {
           anyV.requestVideoFrameCallback(() => {
-            try { v.pause(); } catch {}
+            try { v.pause(); } catch { }
             window.setTimeout(readyNow, 30);
           });
         } else {
-          try { v.pause(); } catch {}
+          try { v.pause(); } catch { }
           window.setTimeout(readyNow, 60);
         }
       };
@@ -171,7 +171,7 @@ export default function Chat() {
         if (v.readyState >= (v.HAVE_CURRENT_DATA ?? 2)) {
           tryFrame();
         }
-      } catch {}
+      } catch { }
 
       v.addEventListener('canplay', onBaseReady, { once: true } as any);
       v.addEventListener('loadeddata', onBaseReady, { once: true } as any);
@@ -187,7 +187,7 @@ export default function Chat() {
             // Likely blocked by autoplay policy; request user interaction
             setNeedsTap(true);
           }
-        } catch {}
+        } catch { }
       }, 1500);
 
       return () => {
@@ -195,9 +195,9 @@ export default function Chat() {
           v.removeEventListener('canplay', onBaseReady as any);
           v.removeEventListener('loadeddata', onBaseReady as any);
           v.removeEventListener('canplaythrough', onBaseReady as any);
-        } catch {}
+        } catch { }
         if (watchdog) {
-          try { window.clearTimeout(watchdog); } catch {}
+          try { window.clearTimeout(watchdog); } catch { }
         }
       };
     }, [src]);
@@ -213,13 +213,13 @@ export default function Chat() {
           const anyV: any = v as any;
           if (typeof anyV.requestVideoFrameCallback === 'function') {
             anyV.requestVideoFrameCallback(() => {
-              try { v.pause(); } catch {}
+              try { v.pause(); } catch { }
               setVideoReady(true);
               setNeedsTap(false);
             });
           } else {
             setTimeout(() => {
-              try { v.pause(); } catch {}
+              try { v.pause(); } catch { }
               setVideoReady(true);
               setNeedsTap(false);
             }, 80);

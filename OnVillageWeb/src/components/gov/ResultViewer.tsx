@@ -102,13 +102,13 @@ export default function ResultViewer({ open, item, onClose, onEdit, onDownload, 
 
           {/* 하단 버튼 영역 */}
           <div className="h-[84px] bg-[#FFF7EA] flex items-center justify-center gap-3">
-            <button
+            {/* <button
               onClick={() => onEdit(item)}
               className="h-11 px-5 rounded-full bg-[#E6E6E6] text-[#333] text-[16px] font-semibold flex items-center gap-2"
             >
               수정하기
               <img src="/images/icon_edit.svg" alt="수정하기" className="w-7 h-7" />
-            </button>
+            </button> */}
             <button
               onClick={() => onDownload(item)}
               className="h-11 px-6 rounded-full bg-[#F6A34D] text-white text-[16px] font-semibold flex items-center gap-2"
@@ -175,13 +175,13 @@ export default function ResultViewer({ open, item, onClose, onEdit, onDownload, 
         {/* 하단 버튼 */}
         <div className="px-4 py-4 bg-[#FFFDF5]">
           <div className="h-[84px] flex items-center justify-center gap-3">
-            <button
+            {/* <button
               onClick={() => onEdit(item)}
               className="h-14 px-8 rounded-full bg-[#E6E6E6] text-[#333] text-[16px] font-semibold flex items-center gap-2"
             >
               수정하기
               <img src="/images/icon_edit.svg" alt="수정하기" className="w-7 h-7" />
-            </button>
+            </button> */}
             <button
               onClick={() => onDownload(item)}
               className="h-14 px-8 rounded-full bg-[#F6A34D] text-white text-[16px] font-semibold flex items-center gap-2"
