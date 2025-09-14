@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import HeaderEld from "../../components/layout/HeaderEld";
-import VoiceBubble from "../../components/elder/VoiceBubble";
+import PaginatedVoiceBubble from "../../components/elder/PaginatedVoiceBubble";
 import MicButton from "../../components/elder/MicButton";
 import ElderAvatar, { type Mood } from "../../components/elder/ElderAvatar";
 // import VoiceLog from "../../components/elder/VoiceLog";
@@ -202,25 +202,26 @@ function DashboardBody() {
               : agentText
                 ? typedAgent.text
                 : (isAgentLast ? typed.text : (last?.text ?? ""));
+
+            // 페이지네이션 말풍선으로 렌더
             return (
-              <VoiceBubble
-                key={last?.id}
-                role={role}
-                className="-mt-[120px] md:-mt-[130px] relative z-20"
-              >
-                {role === "agent" && medInfo ? (
-                  <div>
-                    <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#F4A241]/40 bg-[#FFF3E4] px-3 py-1 text-[16px] font-semibold text-[#B46300]">
+              <div className="-mt-[120px] md:-mt-[130px] relative z-20">
+                <PaginatedVoiceBubble
+                  key={last?.id}
+                  role={role}
+                  text={text}
+                  className=""
+                  // 화면 비율 조정: 한 화면에 들어오도록 34vh 기준
+                  maxVhRatio={0.34}
+                  header={role === "agent" && medInfo ? (
+                    <div className="inline-flex items-center gap-2 rounded-full border border-[#F4A241]/40 bg-[#FFF3E4] px-3 py-1 text-[16px] font-semibold text-[#B46300]">
                       <span aria-hidden>🔔</span>
                       <span>복약 알림</span>
                       {medInfo.time ? <span className="text-[#8B5E00]">· {medInfo.time}</span> : null}
                     </div>
-                    <p className="whitespace-pre-line">{text}</p>
-                  </div>
-                ) : (
-                  <p className="whitespace-pre-line">{text}</p>
-                )}
-              </VoiceBubble>
+                  ) : null}
+                />
+              </div>
             );
           })()}
 

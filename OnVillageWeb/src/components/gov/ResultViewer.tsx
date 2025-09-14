@@ -60,7 +60,7 @@ function AutoPosterVideo({ src, className = "", style }: { src: string; classNam
   );
 }
 
-export default function ResultViewer({ open, item, onClose, onEdit, onDownload, onDelete }: Props) {
+export default function ResultViewer({ open, item, onClose, onDownload, onDelete }: Props) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   if (!open || !item) return null;
 
