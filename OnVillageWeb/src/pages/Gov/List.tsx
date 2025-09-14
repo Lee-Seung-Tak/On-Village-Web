@@ -5,6 +5,7 @@ import HeaderGov from "../../components/layout/HeaderGov";
 import Sidebar from "../../components/layout/Sidebar";
 import MobileDrawer from "../../components/layout/MobileDrawer";
 import ResultViewer from "../../components/gov/ResultViewer";
+import Toast from "../../components/common/Toast";
 import type { GovItem as Item } from "../../types/gov";
 
 // ───────────────────────────────────────────────────────────
@@ -98,14 +99,42 @@ export default function List() {
     console.log("수정하기", it.id);
   };
 
-  const onDownload = (it: Item) => {
+  const [toast, setToast] = useState<{ open: boolean; msg: string }>({ open: false, msg: "" });
+
+  const onDownload = async (it: Item) => {
     if (it.videoUrl) {
-      const a = document.createElement('a');
-      a.href = it.videoUrl;
-      a.download = '';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      try {
+        // 동일 출처 데모 파일은 fetch로 받아 Blob 다운로드 처리 → 완료 시점 제어 가능
+        const res = await fetch(it.videoUrl);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        // 파일명 추정: URL 끝부분 또는 기본값
+        const seg = (it.videoUrl.split('/')?.pop() || 'video.mp4').split('?')[0];
+        a.download = seg || 'video.mp4';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        setToast({ open: true, msg: '다운로드가 완료되었습니다.' });
+      } catch (e) {
+        console.error(e);
+        // CORS 또는 네트워크 제한 시 기존 a.href fallback 시도
+        try {
+          const a = document.createElement('a');
+          a.href = it.videoUrl;
+          a.download = '';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          // 이 경로는 완료 시점을 알 수 없어 시작 안내로 대체
+          setToast({ open: true, msg: '다운로드를 시작했습니다.' });
+        } catch {
+          setToast({ open: true, msg: '다운로드에 실패했습니다.' });
+        }
+      }
       return;
     }
     console.log("다운로드", it.id);
@@ -257,6 +286,13 @@ export default function List() {
         onEdit={onEdit}
         onDownload={onDownload}
         onDelete={onDelete}
+      />
+
+      {/* 다운로드 완료 토스트 */}
+      <Toast
+        open={toast.open}
+        message={toast.msg}
+        onClose={() => setToast({ open: false, msg: '' })}
       />
     </div>
   );
