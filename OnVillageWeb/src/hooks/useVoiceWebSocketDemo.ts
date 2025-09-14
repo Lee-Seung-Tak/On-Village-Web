@@ -7,6 +7,9 @@ type Step = { role: "agent" | "user"; text: string };
 
 const script: Step[] = [
   // 0) 시작
+  { role: "agent", text: "'기쁨아!'라고 불러주세요." },
+  { role: "user", text: "기쁨아" },
+  // 1) 시작
   { role: "agent", text: "안녕하세요, 영수님. 저는 앞으로 생활을 함께 챙겨드릴 기쁨이에요.\n몇 가지 여쭤봐도 괜찮을까요?" },
   { role: "user", text: "그래, 괜찮아." },
 

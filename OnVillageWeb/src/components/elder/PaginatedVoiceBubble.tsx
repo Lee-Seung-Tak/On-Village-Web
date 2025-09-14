@@ -12,6 +12,8 @@ type Props = {
   maxVhRatio?: number;
   // 버블 내부 상단에 표시할 요소(예: 복약 알림 뱃지)
   header?: React.ReactNode;
+  // 텍스트를 연한 회색으로 표시
+  muted?: boolean;
 };
 
 // 공백/줄바꿈을 유지하며 단어 기준으로 쪼개기
@@ -35,7 +37,7 @@ function tokenize(text: string) {
   return tokens;
 }
 
-export default function PaginatedVoiceBubble({ role, text, className, maxVhRatio = 0.34, header }: Props) {
+export default function PaginatedVoiceBubble({ role, text, className, maxVhRatio = 0.34, header, muted }: Props) {
   const fullText = (text ?? "").toString();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const measureRef = useRef<HTMLDivElement | null>(null);
@@ -169,7 +171,7 @@ export default function PaginatedVoiceBubble({ role, text, className, maxVhRatio
         <div className="relative">
           {header ? <div className="mb-2">{header}</div> : null}
           {/* 실제 표시 텍스트 */}
-          <p className="whitespace-pre-line">{visible}</p>
+          <p className={`whitespace-pre-line ${muted ? 'text-[#A6A6A6]' : ''}`}>{visible}</p>
           {indicator ? (
             <span className="absolute -bottom-2 right-0 translate-y-full text-[12px] text-[#8c8c8c] select-none">
               {indicator}

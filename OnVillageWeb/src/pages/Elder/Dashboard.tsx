@@ -197,10 +197,11 @@ function DashboardBody() {
             // 직전 에이전트 말풍선이 잔상처럼 보이지 않도록 함
             const showUserLive = status === 1;
             const role = showUserLive ? "user" : (agentText ? "agent" : (last?.role ?? "agent"));
+            const isHint = (agentText?.trim() ?? "") === "'기쁨아!'라고 불러주세요.";
             const text = showUserLive
               ? transcript
               : agentText
-                ? typedAgent.text
+                ? (isHint ? agentText : typedAgent.text)
                 : (isAgentLast ? typed.text : (last?.text ?? ""));
 
             // 페이지네이션 말풍선으로 렌더
@@ -213,6 +214,7 @@ function DashboardBody() {
                   className=""
                   // 화면 비율 조정: 한 화면에 들어오도록 34vh 기준
                   maxVhRatio={0.34}
+                  muted={!!agentText && isHint}
                   header={role === "agent" && medInfo ? (
                     <div className="inline-flex items-center gap-2 rounded-full border border-[#F4A241]/40 bg-[#FFF3E4] px-3 py-1 text-[16px] font-semibold text-[#B46300]">
                       <span aria-hidden>🔔</span>
