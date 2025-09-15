@@ -1,6 +1,6 @@
 // src/pages/Gov/List.tsx
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import HeaderGov from "../../components/layout/HeaderGov";
 import Sidebar from "../../components/layout/Sidebar";
 import MobileDrawer from "../../components/layout/MobileDrawer";
@@ -17,7 +17,7 @@ export default function List() {
   // 저장 용량/제한 (데모: 5GB 고정), 실제에선 API 응답 사용
   const limitBytes = 5 * 1024 * 1024 * 1024; // 5GB 예시
   const [sizes, setSizes] = useState<Record<string, number>>({}); // id -> bytes
-  const usedBytes = Object.values(sizes).reduce((a, b) => a + b, 0);
+  const usedBytes = useMemo(() => Object.values(sizes).reduce((a, b) => a + b, 0), [sizes]);
   const usagePct = Math.min(100, limitBytes ? Math.round((usedBytes / limitBytes) * 100) : 0);
   const formatBytes = (n: number) => {
     const gb = 1024 * 1024 * 1024;
@@ -27,16 +27,45 @@ export default function List() {
     return `${Math.round(n / 1024)}KB`;
   };
 
-  // 비디오 첫 프레임을 썸네일로 추출해 보여주는 컴포넌트
-  function VideoThumb({ src, alt }: { src: string; alt?: string }) {
+  // 비디오 첫 프레임을 썸네일로 추출해 보여주는 컴포넌트(가시 영역에서만 생성 + 로컬 캐시)
+  const VideoThumb = memo(function VideoThumb({ src, alt }: { src: string; alt?: string }) {
     const [thumb, setThumb] = useState<string | null>(null);
-    const vRef = useRef<HTMLVideoElement | null>(null);
+    const [visible, setVisible] = useState(false);
+    const holderRef = useRef<HTMLDivElement | null>(null);
+
+    // 가시성 관찰: 화면에 들어온 후에만 썸네일 생성
     useEffect(() => {
+      const el = holderRef.current;
+      if (!el) return;
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            setVisible(true);
+            io.disconnect();
+          }
+        });
+      }, { rootMargin: '100px' });
+      io.observe(el);
+      return () => io.disconnect();
+    }, []);
+
+    // 캐시 확인 후 썸네일 생성
+    useEffect(() => {
+      if (!visible) return;
+      try {
+        const key = `vidThumb:${src}`;
+        const cached = localStorage.getItem(key);
+        if (cached) {
+          setThumb(cached);
+          return;
+        }
+      } catch { }
+
       const v = document.createElement('video');
-      vRef.current = v;
       v.src = src;
       v.muted = true;
       v.preload = 'metadata';
+      v.playsInline = true;
       const gen = () => {
         try {
           const seekTo = 0.1;
@@ -49,7 +78,9 @@ export default function List() {
               const ctx = c.getContext('2d');
               if (ctx) {
                 ctx.drawImage(v, 0, 0, w, h);
-                setThumb(c.toDataURL('image/jpeg', 0.85));
+                const data = c.toDataURL('image/jpeg', 0.7);
+                setThumb(data);
+                try { localStorage.setItem(`vidThumb:${src}`, data); } catch { }
               }
             } catch { }
             v.removeEventListener('seeked', onSeeked);
@@ -63,17 +94,24 @@ export default function List() {
       return () => {
         v.removeEventListener('loadedmetadata', gen);
         v.removeEventListener('loadeddata', gen);
-        vRef.current = null;
       };
-    }, [src]);
+    }, [src, visible]);
+
     return (
-      <img
-        src={thumb ?? ''}
-        alt={alt ?? ''}
-        className="absolute inset-0 w-full h-full object-cover"
-      />
+      <div ref={holderRef} className="absolute inset-0">
+        {thumb ? (
+          <img
+            src={thumb}
+            alt={alt ?? ''}
+            className="absolute inset-0 w-full h-full object-cover transition-opacity duration-200"
+          />
+        ) : (
+          // 정적인 플레이스홀더로 깜빡임(animate-pulse) 제거
+          <div className="absolute inset-0 w-full h-full bg-[#E6E6E6]" aria-hidden />
+        )}
+      </div>
     );
-  }
+  });
 
   // 샘플 데이터 (실제에선 API 결과로 채우기)
   const [items, setItems] = useState<Item[]>([
@@ -188,6 +226,7 @@ export default function List() {
     };
 
     const fetchMissing = async () => {
+      const updates: Record<string, number> = {};
       for (const it of items) {
         if (!it.id) continue;
         if (sizes[it.id] != null) continue;
@@ -195,8 +234,12 @@ export default function List() {
         const n = await getSize(it.videoUrl);
         if (!alive) return;
         if (n != null) {
-          setSizes(prev => ({ ...prev, [it.id]: n }));
+          updates[it.id] = n;
         }
+      }
+      if (!alive) return;
+      if (Object.keys(updates).length) {
+        setSizes(prev => ({ ...prev, ...updates }));
       }
     };
     fetchMissing();
@@ -227,7 +270,7 @@ export default function List() {
               <span className="text-[12px] text-[#666] select-none">용량</span>
               <div className="h-2 rounded-full bg-[#E9E6D9] w-full max-w-[320px] overflow-hidden">
                 <div
-                  className="h-full bg-[#3C8C4E] transition-all"
+                  className="h-full bg-[#3C8C4E] transition-[width] duration-300"
                   style={{ width: `${usagePct}%` }}
                   aria-label={`용량 사용량 ${usagePct}%`}
                   role="progressbar"
